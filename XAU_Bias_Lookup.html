@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>XAU Bias Lookup</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d0f14;
+      color: #e2e8f0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #161a24;
+      border: 1px solid #252b3b;
+      border-radius: 16px;
+      padding: 36px 40px;
+      width: 100%;
+      max-width: 560px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .header-text h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f1f5f9;
+      letter-spacing: -0.3px;
+    }
+
+    .header-text p {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .fields {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .field select {
+      width: 100%;
+      background: #0d0f14;
+      border: 1px solid #252b3b;
+      border-radius: 10px;
+      color: #e2e8f0;
+      font-size: 14px;
+      padding: 12px 16px;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .field select:hover { border-color: #3b4360; }
+    .field select:focus { outline: none; border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.12); }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border: none;
+      border-radius: 10px;
+      color: #0d0f14;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.2px;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:hover { opacity: 0.92; }
+    .btn:active { transform: scale(0.99); }
+
+    /* Results */
+    #result {
+      margin-top: 28px;
+      display: none;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #252b3b;
+      margin-bottom: 24px;
+    }
+
+    .outcome-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .outcome-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .sample-line {
+      font-size: 12px;
+      color: #475569;
+      margin-bottom: 20px;
+    }
+
+    .metrics {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .metric-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .metric-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .metric-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: #94a3b8;
+    }
+
+    .metric-value {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .bar-track {
+      height: 6px;
+      background: #1e2536;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .bar-bullish { background: linear-gradient(90deg, #22c55e, #16a34a); }
+    .bar-bearish { background: linear-gradient(90deg, #ef4444, #dc2626); }
+    .bar-chop    { background: linear-gradient(90deg, #f59e0b, #d97706); }
+
+    .color-bullish { color: #22c55e; }
+    .color-bearish { color: #ef4444; }
+    .color-chop    { color: #f59e0b; }
+
+    /* Outcome color themes */
+    .theme-strong-bullish   { background: rgba(34,197,94,0.15);  color: #22c55e; }
+    .theme-bullish-recovery { background: rgba(34,197,94,0.10);  color: #4ade80; }
+    .theme-weak-bullish     { background: rgba(134,239,172,0.10); color: #86efac; }
+    .theme-mixed            { background: rgba(245,158,11,0.12); color: #f59e0b; }
+    .theme-chop             { background: rgba(245,158,11,0.12); color: #fbbf24; }
+    .theme-unstable         { background: rgba(239,68,68,0.10);  color: #fca5a5; }
+    .theme-strong-bearish   { background: rgba(239,68,68,0.15);  color: #ef4444; }
+    .theme-bearish-reversal { background: rgba(239,68,68,0.18);  color: #f87171; }
+
+    .no-match {
+      text-align: center;
+      padding: 20px;
+      color: #475569;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <div class="logo">⚡</div>
+    <div class="header-text">
+      <h1>XAU Bias Lookup</h1>
+      <p>Session-based probability engine</p>
+    </div>
+  </div>
+
+  <div class="fields">
+    <div class="field">
+      <label>Asia Session</label>
+      <select id="asia">
+        <option value="">— Select direction —</option>
+        <option value="Bullish">Bullish</option>
+        <option value="Bearish">Bearish</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>London IB</label>
+      <select id="london">
+        <option value="">— Select direction —</option>
+        <option value="Bullish">Bullish</option>
+        <option value="Bearish">Bearish</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>09:00 – 10:00 Condition</label>
+      <select id="condition">
+        <option value="">— Select condition —</option>
+        <option value="Above Asia Midpoint">Above Asia Midpoint</option>
+        <option value="Below Asia Midpoint">Below Asia Midpoint</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="btn" onclick="lookup()">Calculate Bias</button>
+
+  <div id="result">
+    <hr class="divider">
+    <div id="result-inner"></div>
+  </div>
+</div>
+
+<script>
+  const DATA = [
+    { asia:"Bullish",  london:"Bullish",  condition:"Above Asia Midpoint", n:190, bull:0.732, bear:0.116, chop:0.153, outcome:"Strong Bullish" },
+    { asia:"Bullish",  london:"Bearish",  condition:"Above Asia Midpoint", n:87,  bull:0.701, bear:0.149, chop:0.149, outcome:"Bullish Recovery" },
+    { asia:"Bullish",  london:"Bullish",  condition:"Below Asia Midpoint", n:12,  bull:0.667, bear:0.333, chop:0.000, outcome:"Weak Bullish" },
+    { asia:"Bearish",  london:"Bullish",  condition:"Above Asia Midpoint", n:60,  bull:0.500, bear:0.383, chop:0.117, outcome:"Mixed / Transitional" },
+    { asia:"Bullish",  london:"Bearish",  condition:"Below Asia Midpoint", n:40,  bull:0.450, bear:0.350, chop:0.200, outcome:"Chop Risk" },
+    { asia:"Bearish",  london:"Bearish",  condition:"Above Asia Midpoint", n:20,  bull:0.300, bear:0.400, chop:0.300, outcome:"Unstable / Chop" },
+    { asia:"Bearish",  london:"Bullish",  condition:"Below Asia Midpoint", n:71,  bull:0.225, bear:0.662, chop:0.113, outcome:"Strong Bearish Reversal" },
+    { asia:"Bearish",  london:"Bearish",  condition:"Below Asia Midpoint", n:114, bull:0.132, bear:0.719, chop:0.149, outcome:"Strong Bearish" },
+  ];
+
+  function outcomeTheme(outcome) {
+    const o = outcome.toLowerCase();
+    if (o.includes("strong bullish"))   return "theme-strong-bullish";
+    if (o.includes("bullish recovery")) return "theme-bullish-recovery";
+    if (o.includes("weak bullish"))     return "theme-weak-bullish";
+    if (o.includes("mixed"))            return "theme-mixed";
+    if (o.includes("chop risk"))        return "theme-chop";
+    if (o.includes("unstable"))         return "theme-unstable";
+    if (o.includes("strong bearish"))   return "theme-strong-bearish";
+    if (o.includes("reversal"))         return "theme-bearish-reversal";
+    return "theme-mixed";
+  }
+
+  function pct(v) { return (v * 100).toFixed(1) + "%"; }
+
+  function lookup() {
+    const asia      = document.getElementById("asia").value;
+    const london    = document.getElementById("london").value;
+    const condition = document.getElementById("condition").value;
+    const resultEl  = document.getElementById("result");
+    const inner     = document.getElementById("result-inner");
+
+    if (!asia || !london || !condition) {
+      inner.innerHTML = `<div class="no-match">Please select all three parameters.</div>`;
+      resultEl.style.display = "block";
+      return;
+    }
+
+    const row = DATA.find(d => d.asia === asia && d.london === london && d.condition === condition);
+
+    if (!row) {
+      inner.innerHTML = `<div class="no-match">No matching scenario found.</div>`;
+      resultEl.style.display = "block";
+      return;
+    }
+
+    const theme = outcomeTheme(row.outcome);
+
+    inner.innerHTML = `
+      <div class="outcome-label">Dominant Outcome</div>
+      <span class="outcome-badge ${theme}">${row.outcome}</span>
+      <div class="sample-line">Based on ${row.n} historical samples</div>
+
+      <div class="metrics">
+        <div class="metric-row">
+          <div class="metric-header">
+            <span class="metric-name">Bullish Close</span>
+            <span class="metric-value color-bullish">${pct(row.bull)}</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill bar-bullish" style="width:${row.bull*100}%"></div></div>
+        </div>
+        <div class="metric-row">
+          <div class="metric-header">
+            <span class="metric-name">Bearish Close</span>
+            <span class="metric-value color-bearish">${pct(row.bear)}</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill bar-bearish" style="width:${row.bear*100}%"></div></div>
+        </div>
+        <div class="metric-row">
+          <div class="metric-header">
+            <span class="metric-name">Chop / Neutral</span>
+            <span class="metric-value color-chop">${pct(row.chop)}</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill bar-chop" style="width:${row.chop*100}%"></div></div>
+        </div>
+      </div>
+    `;
+
+    resultEl.style.display = "block";
+  }
+
+  // Allow Enter key
+  document.addEventListener("keydown", e => { if (e.key === "Enter") lookup(); });
+</script>
+
+</body>
+</html>
