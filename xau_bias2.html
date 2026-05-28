@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XAU/USD Session Bias Tool</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0b0d14;
+    color: #d0d0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: #0f1117;
+    border-bottom: 1px solid #1e2133;
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: linear-gradient(135deg, #ffd700, #ffb300);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; font-weight: 800; color: #000;
+  }
+  .logo-text { font-size: 1rem; font-weight: 600; color: #fff; }
+  .logo-sub { font-size: 0.7rem; color: #556; margin-top: 1px; }
+  .header-meta { font-size: 0.72rem; color: #445; text-align: right; line-height: 1.6; }
+
+  /* ── LAYOUT ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: #0f1117;
+    border-right: 1px solid #1a1d2e;
+    padding: 28px 24px;
+    overflow-y: auto;
+  }
+
+  .sidebar-section {
+    margin-bottom: 28px;
+  }
+  .sidebar-section-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #334;
+    border-bottom: 1px solid #1a1d2e;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+  }
+
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #889;
+    margin-bottom: 7px;
+    letter-spacing: 0.02em;
+  }
+  .field-hint {
+    font-size: 0.68rem;
+    color: #445;
+    margin-top: 5px;
+    line-height: 1.5;
+  }
+
+  select {
+    width: 100%;
+    background: #141620;
+    border: 1px solid #1e2133;
+    color: #c8c8d8;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-family: inherit;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23556' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+  select:hover { border-color: #2a2d3e; background-color: #161820; }
+  select:focus { outline: none; border-color: #ffd700; }
+
+  /* Option colour cues */
+  select option { background: #141620; }
+
+  .btn-calc {
+    width: 100%;
+    background: linear-gradient(135deg, #ffd700 0%, #e6a800 100%);
+    color: #000;
+    font-weight: 800;
+    font-size: 0.9rem;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: opacity 0.15s, transform 0.1s, box-shadow 0.2s;
+    margin-top: 4px;
+  }
+  .btn-calc:hover { opacity: 0.92; box-shadow: 0 4px 20px rgba(255,215,0,0.25); transform: translateY(-1px); }
+  .btn-calc:active { transform: translateY(0); opacity: 1; }
+
+  /* ── RESULTS ── */
+  .results {
+    padding: 28px 32px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Placeholder */
+  .placeholder {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    color: #222;
+    text-align: center;
+  }
+  .placeholder-icon { font-size: 3.5rem; }
+  .placeholder-label { font-size: 0.95rem; color: #334; }
+  .placeholder-sub { font-size: 0.75rem; color: #223; }
+
+  /* Bias card */
+  .bias-card {
+    border-radius: 14px;
+    padding: 24px 28px;
+    border: 1px solid transparent;
+    position: relative;
+    overflow: hidden;
+  }
+  .bias-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    border-radius: 4px 0 0 4px;
+  }
+  .bias-card.bull { background: #0d1f16; border-color: #1a3d28; }
+  .bias-card.bull::before { background: #52b788; }
+  .bias-card.bear { background: #1f0d0d; border-color: #3d1a1a; }
+  .bias-card.bear::before { background: #e07070; }
+  .bias-card.chop { background: #1f1500; border-color: #3d2800; }
+  .bias-card.chop::before { background: #ffb74d; }
+  .bias-card.neutral { background: #12141e; border-color: #1e2133; }
+  .bias-card.neutral::before { background: #445; }
+  .bias-card.low { background: #12141e; border-color: #1e2133; border-style: dashed; }
+  .bias-card.low::before { background: #333; }
+
+  .bias-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em; color: #556; margin-bottom: 6px; }
+  .bias-outcome { font-size: 1.9rem; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.01em; }
+  .bias-outcome.bull { color: #52b788; }
+  .bias-outcome.bear { color: #e07070; }
+  .bias-outcome.chop { color: #ffb74d; }
+  .bias-outcome.neutral { color: #778; }
+  .bias-desc { font-size: 0.82rem; color: #778; line-height: 1.6; }
+  .bias-sample { font-size: 0.7rem; color: #445; margin-top: 8px; }
+
+  /* Probability meters */
+  .meters {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  .meter {
+    background: #0f1117;
+    border: 1px solid #1a1d2e;
+    border-radius: 12px;
+    padding: 18px 16px;
+  }
+  .meter-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: #445; margin-bottom: 10px; }
+  .meter-pct { font-size: 2rem; font-weight: 700; line-height: 1; margin-bottom: 10px; }
+  .meter-pct.bull { color: #52b788; }
+  .meter-pct.bear { color: #e07070; }
+  .meter-pct.chop { color: #ffb74d; }
+  .bar-track { background: #0b0d14; border-radius: 3px; height: 5px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1); }
+  .bar-fill.bull { background: linear-gradient(90deg, #2d6a4f, #52b788); }
+  .bar-fill.bear { background: linear-gradient(90deg, #7b2d2d, #e07070); }
+  .bar-fill.chop { background: linear-gradient(90deg, #7b5200, #ffb74d); }
+
+  /* Conditions summary */
+  .conditions {
+    background: #0f1117;
+    border: 1px solid #1a1d2e;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .conditions-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: #445; margin-bottom: 14px; }
+  .condition-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #12141e;
+    font-size: 0.8rem;
+  }
+  .condition-row:last-child { border-bottom: none; }
+  .cond-name { color: #667; }
+  .cond-val { font-weight: 600; }
+  .cond-val.bull { color: #52b788; }
+  .cond-val.bear { color: #e07070; }
+  .cond-val.neutral { color: #889; }
+
+  /* Confidence indicator */
+  .confidence {
+    background: #0f1117;
+    border: 1px solid #1a1d2e;
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .conf-dial {
+    width: 52px; height: 52px; border-radius: 50%;
+    border: 3px solid #1a1d2e;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 800; flex-shrink: 0;
+  }
+  .conf-dial.high { border-color: #52b788; color: #52b788; background: rgba(82,183,136,0.08); }
+  .conf-dial.medium { border-color: #ffb74d; color: #ffb74d; background: rgba(255,183,77,0.08); }
+  .conf-dial.low { border-color: #778; color: #778; background: rgba(119,136,153,0.05); }
+  .conf-text {}
+  .conf-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: #445; margin-bottom: 4px; }
+  .conf-desc { font-size: 0.8rem; color: #889; line-height: 1.5; }
+
+  /* Disclaimer */
+  .disclaimer {
+    background: #0c0e14;
+    border: 1px solid #151720;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.68rem;
+    color: #334;
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">Au</div>
+    <div>
+      <div class="logo-text">XAU/USD Session Bias Tool</div>
+      <div class="logo-sub">Session-based · Historical data model</div>
+    </div>
+  </div>
+  <div class="header-meta">
+    4,312 trading days&nbsp;&nbsp;·&nbsp;&nbsp;H1 Data 2009–2026<br>
+    All times UTC+1 (your TradingView)
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ── SIDEBAR ────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Asia Session (UTC+1 &nbsp;00:00 – 07:59)</div>
+
+      <div class="field">
+        <label>Asia Regime</label>
+        <select id="asia">
+          <option value="Bullish Expansion">Bullish Expansion</option>
+          <option value="Bullish Compression">Bullish Compression</option>
+          <option value="Bearish Expansion">Bearish Expansion</option>
+          <option value="Bearish Compression">Bearish Compression</option>
+          <option value="Neutral Balance">Neutral Balance</option>
+        </select>
+        <div class="field-hint">
+          <b>Direction:</b> Bullish = Asia closed above its open &nbsp;·&nbsp; Bearish = below<br>
+          <b>Expansion</b> = Asia range in top-33% of ADR20 &nbsp;·&nbsp; <b>Compression</b> = bottom-33% &nbsp;·&nbsp; <b>Neutral</b> = middle
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">London IB (UTC+1 &nbsp;08:00 – 08:59)</div>
+
+      <div class="field">
+        <label>London IB Regime</label>
+        <select id="london">
+          <option value="Bullish Expansion">Bullish Expansion</option>
+          <option value="Bullish Compression">Bullish Compression</option>
+          <option value="Bearish Expansion">Bearish Expansion</option>
+          <option value="Bearish Compression">Bearish Compression</option>
+          <option value="Neutral Balance">Neutral Balance</option>
+        </select>
+        <div class="field-hint">The single 08:00 candle (UTC+1). Classify by direction and whether its range is large or small relative to ADR20.</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">09:00 Condition (UTC+1 &nbsp;09:00 open)</div>
+
+      <div class="field">
+        <label>Price at 09:00 open vs Asia Midpoint</label>
+        <select id="ny9">
+          <option value="Above Asia Midpoint">Above Asia Midpoint</option>
+          <option value="Below Asia Midpoint">Below Asia Midpoint</option>
+        </select>
+        <div class="field-hint">
+          Asia Midpoint = (Asia High + Asia Low) / 2<br>
+          When the 09:00 candle opens, is price above or below that level?
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-calc" onclick="calculate()">→ &nbsp;Generate Bias</button>
+
+  </aside>
+
+  <!-- ── RESULTS ────────────────────────────────────────────────── -->
+  <main class="results" id="results">
+    <div class="placeholder">
+      <div class="placeholder-icon">📡</div>
+      <div class="placeholder-label">Set the three session conditions and generate bias</div>
+      <div class="placeholder-sub">4,312 trading days · UTC+1 sessions · 2009–2026</div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+// ── Historical data: all 24 scenarios ────────────────────────────────────────
+// Calibrated on 4,312 XAUUSD trading days (2009–2026), H1 data in UTC
+// All session times displayed in UTC+1 to match TradingView
+// Asia = UTC+1 00:00–07:59 | London IB = UTC+1 08:00–08:59 | 09:00 cond = UTC+1 09:00 open
+// [asia, london, ny9, n, bull_pct, bear_pct, chop_pct, dominant]
+const DATA = [
+  ["Bullish Expansion",  "Bullish Compression",  "Above Asia Midpoint",  74,  0.824, 0.176, 0.122, "Bullish"],
+  ["Bullish Expansion",  "Bullish Expansion",    "Above Asia Midpoint", 155,  0.839, 0.161, 0.032, "Bullish"],
+  ["Bullish Compression","Bullish Expansion",    "Above Asia Midpoint",  82,  0.646, 0.354, 0.232, "Bullish"],
+  ["Bullish Compression","Bullish Compression",  "Above Asia Midpoint", 160,  0.594, 0.406, 0.356, "Lean Bull"],
+  ["Bullish Expansion",  "Bearish Compression",  "Above Asia Midpoint",  82,  0.805, 0.195, 0.207, "Bullish"],
+  ["Bullish Expansion",  "Bearish Expansion",    "Above Asia Midpoint",  98,  0.714, 0.286, 0.082, "Bullish"],
+  ["Bearish Expansion",  "Bullish Compression",  "Below Asia Midpoint",  53,  0.170, 0.830, 0.189, "Bearish"],
+  ["Bearish Expansion",  "Bearish Expansion",    "Below Asia Midpoint", 156,  0.205, 0.795, 0.026, "Bearish"],
+  ["Bearish Expansion",  "Bearish Compression",  "Below Asia Midpoint",  58,  0.155, 0.845, 0.138, "Bearish"],
+  ["Bearish Compression","Bullish Compression",  "Below Asia Midpoint",  79,  0.291, 0.709, 0.203, "Bearish"],
+  ["Bearish Compression","Bullish Expansion",    "Above Asia Midpoint",  83,  0.639, 0.361, 0.217, "Bullish"],
+  ["Bearish Expansion",  "Bullish Expansion",    "Below Asia Midpoint",  85,  0.247, 0.753, 0.071, "Bearish"],
+  ["Bullish Compression","Bearish Expansion",    "Above Asia Midpoint",   7,  null,  null,  null,  "Low data (n=7)"],
+  ["Bullish Compression","Bearish Compression",  "Above Asia Midpoint", 113,  0.513, 0.487, 0.354, "Neutral"],
+  ["Neutral Balance",    "Bullish Expansion",    "Above Asia Midpoint", 183,  0.645, 0.355, 0.164, "Bullish"],
+  ["Bearish Compression","Bearish Expansion",    "Below Asia Midpoint",  76,  0.408, 0.592, 0.197, "Lean Bear"],
+  ["Bearish Compression","Neutral Balance",      "Below Asia Midpoint", 133,  0.398, 0.602, 0.203, "Bearish"],
+  ["Bullish Compression","Bearish Expansion",    "Below Asia Midpoint",  67,  0.433, 0.567, 0.179, "Lean Bear"],
+  ["Bullish Expansion",  "Neutral Balance",      "Above Asia Midpoint", 241,  0.809, 0.191, 0.100, "Bullish"],
+  ["Neutral Balance",    "Bearish Expansion",    "Above Asia Midpoint",  36,  0.528, 0.472, 0.139, "Neutral"],
+  ["Neutral Balance",    "Bearish Expansion",    "Below Asia Midpoint", 214,  0.393, 0.607, 0.107, "Bearish"],
+  ["Neutral Balance",    "Bullish Compression",  "Above Asia Midpoint", 158,  0.665, 0.335, 0.329, "Bullish"],
+  ["Bearish Compression","Bearish Compression",  "Below Asia Midpoint", 105,  0.314, 0.686, 0.352, "Bearish"],
+  ["Neutral Balance",    "Neutral Balance",      "Above Asia Midpoint", 285,  0.702, 0.298, 0.182, "Bullish"],
+];
+
+const domConfig = {
+  'Bullish':   { cls: 'bull', emoji: '▲', label: 'BULLISH BIAS' },
+  'Bearish':   { cls: 'bear', emoji: '▼', label: 'BEARISH BIAS' },
+  'Chop':      { cls: 'chop', emoji: '⚡', label: 'CHOP / RANGE DAY' },
+  'Lean Bull': { cls: 'bull', emoji: '△', label: 'SLIGHT BULLISH LEAN' },
+  'Lean Bear': { cls: 'bear', emoji: '▽', label: 'SLIGHT BEARISH LEAN' },
+  'Neutral':   { cls: 'neutral', emoji: '◇', label: 'NEUTRAL' },
+};
+
+function valClass(label) {
+  if (label.includes('Bullish')) return 'bull';
+  if (label.includes('Bearish')) return 'bear';
+  return 'neutral';
+}
+
+function calculate() {
+  const asia   = document.getElementById('asia').value;
+  const london = document.getElementById('london').value;
+  const ny9    = document.getElementById('ny9').value;
+
+  const row = DATA.find(r => r[0]===asia && r[1]===london && r[2]===ny9);
+
+  const panel = document.getElementById('results');
+
+  if (!row) {
+    panel.innerHTML = `<div class="placeholder"><div class="placeholder-icon">❓</div><div class="placeholder-label">Scenario not found in dataset</div></div>`;
+    return;
+  }
+
+  const [,,,n, bull, bear, chop, dom] = row;
+  const isLow = bull === null;
+
+  if (isLow) {
+    panel.innerHTML = `
+      <div class="bias-card low">
+        <div class="bias-label">Daily Bias</div>
+        <div class="bias-outcome neutral">⚠ Insufficient Data</div>
+        <div class="bias-desc">This combination has only ${n} historical occurrences — not enough to produce a reliable probability estimate.</div>
+        <div class="bias-sample">Scenario: ${asia} → ${london} → ${ny9}</div>
+      </div>
+      <div class="disclaimer">⚠ Minimum 10 observations required for probability output. This scenario is too rare to draw conclusions from.</div>`;
+    return;
+  }
+
+  const cfg = domConfig[dom] || domConfig['Neutral'];
+
+  // Confidence level
+  let confCls, confLetter, confDesc;
+  const maxDir = Math.max(bull, bear);
+  if (maxDir >= 0.75 || chop >= 0.60) {
+    confCls = 'high'; confLetter = 'A';
+    confDesc = `Strong historical signal. ${n} occurrences in the dataset. High directional conviction.`;
+  } else if (maxDir >= 0.60 || chop >= 0.45) {
+    confCls = 'medium'; confLetter = 'B';
+    confDesc = `Moderate signal strength. ${n} historical occurrences. Use as a lean, not a certainty.`;
+  } else {
+    confCls = 'low'; confLetter = 'C';
+    confDesc = `Weak directional signal. ${n} occurrences. Sessions are conflicting — wait for additional confirmation.`;
+  }
+
+  // Build description
+  let desc = '';
+  if (dom === 'Bullish') {
+    desc = `Historically, this session combination closes bullish ${(bull*100).toFixed(1)}% of the time. Price tends to follow the directional confluence of Asia and London into the NY session.`;
+  } else if (dom === 'Bearish') {
+    desc = `Historically, this session combination closes bearish ${(bear*100).toFixed(1)}% of the time. The selling pressure established in Asia and/or London typically extends into close.`;
+  } else if (dom === 'Chop') {
+    desc = `This combination produces a range-bound day ${(chop*100).toFixed(1)}% of the time. Expect price to oscillate rather than trend. Fade extremes, avoid breakout trades.`;
+  } else if (dom === 'Lean Bull') {
+    desc = `Slight bullish lean (${(bull*100).toFixed(1)}%) but the signal is weak. Sessions are conflicting. Wait for intraday structure to confirm direction before committing.`;
+  } else if (dom === 'Lean Bear') {
+    desc = `Slight bearish lean (${(bear*100).toFixed(1)}%) but the signal is weak. Sessions are conflicting. Wait for intraday structure to confirm direction before committing.`;
+  }
+
+  panel.innerHTML = `
+    <div class="bias-card ${cfg.cls}">
+      <div class="bias-label">Daily Bias — Historical Outcome</div>
+      <div class="bias-outcome ${cfg.cls}">${cfg.emoji}&nbsp; ${cfg.label}</div>
+      <div class="bias-desc">${desc}</div>
+      <div class="bias-sample">Based on <strong>${n}</strong> historical occurrences of this exact session combination</div>
+    </div>
+
+    <div class="meters">
+      <div class="meter">
+        <div class="meter-label">Bull Probability</div>
+        <div class="meter-pct bull">${(bull*100).toFixed(1)}%</div>
+        <div class="bar-track"><div class="bar-fill bull" style="width:${bull*100}%"></div></div>
+      </div>
+      <div class="meter">
+        <div class="meter-label">Bear Probability</div>
+        <div class="meter-pct bear">${(bear*100).toFixed(1)}%</div>
+        <div class="bar-track"><div class="bar-fill bear" style="width:${bear*100}%"></div></div>
+      </div>
+      <div class="meter">
+        <div class="meter-label">Chop Probability</div>
+        <div class="meter-pct chop">${(chop*100).toFixed(1)}%</div>
+        <div class="bar-track"><div class="bar-fill chop" style="width:${chop*100}%"></div></div>
+      </div>
+    </div>
+
+    <div class="conditions">
+      <div class="conditions-title">Today's Session Conditions</div>
+      <div class="condition-row">
+        <span class="cond-name">Asia Session (00:00–06:59)</span>
+        <span class="cond-val ${valClass(asia)}">${asia}</span>
+      </div>
+      <div class="condition-row">
+        <span class="cond-name">London IB (07:00–08:59)</span>
+        <span class="cond-val ${valClass(london)}">${london}</span>
+      </div>
+      <div class="condition-row">
+        <span class="cond-name">09:00 vs Asia Midpoint</span>
+        <span class="cond-val ${ny9.includes('Above') ? 'bull' : 'bear'}">${ny9}</span>
+      </div>
+    </div>
+
+    <div class="confidence">
+      <div class="conf-dial ${confCls}">${confLetter}</div>
+      <div class="conf-text">
+        <div class="conf-label">Signal Confidence</div>
+        <div class="conf-desc">${confDesc}</div>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      ⚠ <b>Risk Disclaimer:</b> This tool reflects historical frequencies across 4,312 XAUUSD trading days (2009–2026). Probabilities describe past patterns — they do not guarantee future outcomes. News events, liquidity gaps, and macro surprises can override any statistical bias. This is a research tool, not a trade signal. Manage risk independently at all times.
+    </div>`;
+}
+</script>
+</body>
+</html>
