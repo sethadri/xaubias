@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<title>XAUUSD Bias Predictor</title>
+
+<style>
+
+body{
+    margin:0;
+    padding:40px;
+    background:#0f172a;
+    font-family:Arial, sans-serif;
+    color:white;
+}
+
+.container{
+    max-width:1000px;
+    margin:auto;
+    background:#111827;
+    padding:30px;
+    border-radius:14px;
+    box-shadow:0 0 20px rgba(0,0,0,0.4);
+}
+
+h1{
+    text-align:center;
+    color:#38bdf8;
+    margin-bottom:40px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:20px;
+    margin-bottom:30px;
+}
+
+label{
+    display:block;
+    margin-bottom:10px;
+    font-weight:bold;
+    color:#cbd5e1;
+}
+
+select{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:10px;
+    background:#1e293b;
+    color:white;
+    font-size:15px;
+}
+
+button{
+    width:100%;
+    padding:16px;
+    border:none;
+    border-radius:10px;
+    background:#38bdf8;
+    color:#0f172a;
+    font-weight:bold;
+    font-size:16px;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+button:hover{
+    background:#0ea5e9;
+}
+
+.result{
+    margin-top:35px;
+    display:none;
+    background:#1e293b;
+    padding:25px;
+    border-radius:12px;
+}
+
+.result h2{
+    margin-top:0;
+    color:#38bdf8;
+}
+
+.row{
+    margin-bottom:18px;
+    font-size:18px;
+}
+
+.dominant{
+    margin-top:25px;
+    padding:18px;
+    border-radius:10px;
+    text-align:center;
+    font-size:22px;
+    font-weight:bold;
+}
+
+.bullish{
+    background:#14532d;
+    color:#86efac;
+}
+
+.bearish{
+    background:#7f1d1d;
+    color:#fca5a5;
+}
+
+.mixed{
+    background:#78350f;
+    color:#fde68a;
+}
+
+.footer{
+    margin-top:35px;
+    text-align:center;
+    color:#94a3b8;
+    font-size:13px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>XAUUSD Daily Bias Predictor</h1>
+
+<div class="grid">
+
+<div>
+<label>Asia Regime</label>
+
+<select id="asia">
+
+<option value="Bullish Expansion">Bullish Expansion</option>
+<option value="Bearish Expansion">Bearish Expansion</option>
+<option value="Bullish Compression">Bullish Compression</option>
+<option value="Bearish Compression">Bearish Compression</option>
+<option value="Neutral Balance">Neutral Balance</option>
+
+</select>
+</div>
+
+<div>
+<label>London IB (08:00–09:00)</label>
+
+<select id="ib">
+
+<option value="Bullish">Bullish</option>
+<option value="Bearish">Bearish</option>
+
+</select>
+</div>
+
+<div>
+<label>09:00–10:00 Condition</label>
+
+<select id="condition">
+
+<option value="Above Asia Midpoint">Above Asia Midpoint</option>
+<option value="Below Asia Midpoint">Below Asia Midpoint</option>
+
+</select>
+</div>
+
+</div>
+
+<button onclick="runBias()">Generate Daily Bias</button>
+
+<div class="result" id="resultBox">
+
+<h2>Statistical Output</h2>
+
+<div class="row" id="sample"></div>
+<div class="row" id="bullish"></div>
+<div class="row" id="bearish"></div>
+<div class="row" id="chop"></div>
+
+<div class="dominant" id="dominant"></div>
+
+</div>
+
+<div class="footer">
+Built from XAUUSD ASK/BID historical dataset (~2.5 years)
+</div>
+
+</div>
+
+<script>
+
+// ======================================================
+// DATASET
+// ======================================================
+
+const data = {
+
+"Bearish Compression|Bearish|Below Asia Midpoint":{
+    sample:37,
+    bullish:29.7,
+    bearish:43.2,
+    chop:27.0,
+    dominant:"Bearish"
+},
+
+"Bearish Compression|Bullish|Above Asia Midpoint":{
+    sample:20,
+    bullish:75.0,
+    bearish:15.0,
+    chop:10.0,
+    dominant:"Bullish"
+},
+
+"Bearish Compression|Bullish|Below Asia Midpoint":{
+    sample:25,
+    bullish:28.0,
+    bearish:48.0,
+    chop:24.0,
+    dominant:"Bearish"
+},
+
+"Bearish Expansion|Bearish|Below Asia Midpoint":{
+    sample:56,
+    bullish:8.9,
+    bearish:71.4,
+    chop:19.6,
+    dominant:"Strong Bearish"
+},
+
+"Bearish Expansion|Bullish|Above Asia Midpoint":{
+    sample:14,
+    bullish:42.9,
+    bearish:42.9,
+    chop:14.3,
+    dominant:"Mixed"
+},
+
+"Bearish Expansion|Bullish|Below Asia Midpoint":{
+    sample:51,
+    bullish:17.6,
+    bearish:60.8,
+    chop:21.6,
+    dominant:"Bearish"
+},
+
+"Bullish Compression|Bearish|Above Asia Midpoint":{
+    sample:37,
+    bullish:48.6,
+    bearish:32.4,
+    chop:18.9,
+    dominant:"Mild Bullish"
+},
+
+"Bullish Compression|Bearish|Below Asia Midpoint":{
+    sample:23,
+    bullish:39.1,
+    bearish:34.8,
+    chop:26.1,
+    dominant:"Chop / Weak Bullish"
+},
+
+"Bullish Compression|Bullish|Above Asia Midpoint":{
+    sample:63,
+    bullish:54.0,
+    bearish:22.2,
+    chop:23.8,
+    dominant:"Bullish"
+},
+
+"Bullish Expansion|Bearish|Above Asia Midpoint":{
+    sample:67,
+    bullish:70.1,
+    bearish:3.0,
+    chop:26.9,
+    dominant:"Strong Bullish"
+},
+
+"Bullish Expansion|Bullish|Above Asia Midpoint":{
+    sample:87,
+    bullish:77.0,
+    bearish:4.6,
+    chop:18.4,
+    dominant:"Strong Bullish"
+},
+
+"Neutral Balance|Bearish|Above Asia Midpoint":{
+    sample:14,
+    bullish:71.4,
+    bearish:14.3,
+    chop:14.3,
+    dominant:"Bullish"
+},
+
+"Neutral Balance|Bearish|Below Asia Midpoint":{
+    sample:39,
+    bullish:30.8,
+    bearish:48.7,
+    chop:20.5,
+    dominant:"Bearish"
+},
+
+"Neutral Balance|Bullish|Above Asia Midpoint":{
+    sample:57,
+    bullish:50.9,
+    bearish:22.8,
+    chop:26.3,
+    dominant:"Mild Bullish"
+}
+
+};
+
+// ======================================================
+// FUNCTION
+// ======================================================
+
+function runBias(){
+
+    const asia = document.getElementById("asia").value;
+    const ib = document.getElementById("ib").value;
+    const condition = document.getElementById("condition").value;
+
+    const key = `${asia}|${ib}|${condition}`;
+
+    const result = data[key];
+
+    const resultBox = document.getElementById("resultBox");
+
+    if(result){
+
+        document.getElementById("sample").innerHTML =
+            `<strong>Sample Size:</strong> ${result.sample}`;
+
+        document.getElementById("bullish").innerHTML =
+            `<strong>Bullish Close %:</strong> ${result.bullish}%`;
+
+        document.getElementById("bearish").innerHTML =
+            `<strong>Bearish Close %:</strong> ${result.bearish}%`;
+
+        document.getElementById("chop").innerHTML =
+            `<strong>Chop %:</strong> ${result.chop}%`;
+
+        const dom = document.getElementById("dominant");
+
+        dom.innerHTML = result.dominant;
+
+        dom.className = "dominant";
+
+        if(result.dominant.toLowerCase().includes("bullish")){
+            dom.classList.add("bullish");
+        }
+        else if(result.dominant.toLowerCase().includes("bearish")){
+            dom.classList.add("bearish");
+        }
+        else{
+            dom.classList.add("mixed");
+        }
+
+        resultBox.style.display = "block";
+
+    }
+    else{
+
+        resultBox.style.display = "block";
+
+        document.getElementById("sample").innerHTML = "";
+        document.getElementById("bullish").innerHTML = "";
+        document.getElementById("bearish").innerHTML = "";
+        document.getElementById("chop").innerHTML = "";
+
+        const dom = document.getElementById("dominant");
+
+        dom.className = "dominant mixed";
+
+        dom.innerHTML =
+            "No statistically significant historical sample for this combination.";
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>
