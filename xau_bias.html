@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XAU Bias Lookup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d0f14;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .card {
+    background: #161a22;
+    border: 1px solid #2a2f3d;
+    border-radius: 16px;
+    padding: 36px 40px;
+    width: 100%;
+    max-width: 560px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #f5c842;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 28px;
+  }
+
+  .field {
+    margin-bottom: 18px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #9ca3af;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+  }
+
+  select {
+    width: 100%;
+    background: #1f2433;
+    border: 1px solid #2e3547;
+    color: #e0e0e0;
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-size: 0.92rem;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  select:focus { outline: none; border-color: #f5c842; }
+
+  .result-box {
+    margin-top: 28px;
+    background: #1a1f2e;
+    border: 1px solid #2a2f3d;
+    border-radius: 12px;
+    padding: 24px;
+    display: none;
+  }
+
+  .result-box.visible { display: block; }
+
+  .no-data {
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.88rem;
+    padding: 10px 0;
+  }
+
+  .dominant {
+    text-align: center;
+    margin-bottom: 22px;
+  }
+
+  .dominant-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #6b7280;
+    margin-bottom: 6px;
+  }
+
+  .dominant-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+  }
+
+  .dominant-value.bullish    { color: #22c55e; }
+  .dominant-value.bearish    { color: #ef4444; }
+  .dominant-value.mixed      { color: #f5c842; }
+  .dominant-value.chop       { color: #9ca3af; }
+
+  .bars {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .bar-row { display: flex; flex-direction: column; gap: 5px; }
+
+  .bar-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+  }
+
+  .bar-name { color: #9ca3af; font-weight: 600; }
+  .bar-pct  { font-weight: 700; }
+
+  .bar-track {
+    background: #2a2f3d;
+    border-radius: 4px;
+    height: 8px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+  }
+
+  .bar-fill.bull { background: #22c55e; }
+  .bar-fill.bear { background: #ef4444; }
+  .bar-fill.chop { background: #9ca3af; }
+
+  .sample {
+    text-align: center;
+    font-size: 0.75rem;
+    color: #6b7280;
+    border-top: 1px solid #2a2f3d;
+    padding-top: 14px;
+  }
+
+  .sample span { color: #9ca3af; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>⚡ XAU Bias Lookup</h1>
+  <p class="subtitle">Select session parameters to view historical bias</p>
+
+  <div class="field">
+    <label>Asia Session Regime</label>
+    <select id="asia">
+      <option value="">— Select —</option>
+      <option value="Bearish Compression">Bearish Compression</option>
+      <option value="Bearish Expansion">Bearish Expansion</option>
+      <option value="Bullish Compression">Bullish Compression</option>
+      <option value="Bullish Expansion">Bullish Expansion</option>
+      <option value="Neutral Balance">Neutral Balance</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>London IB Direction</label>
+    <select id="london">
+      <option value="">— Select —</option>
+      <option value="Bearish">Bearish</option>
+      <option value="Bullish">Bullish</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>9:00–10:00 Condition</label>
+    <select id="condition">
+      <option value="">— Select —</option>
+      <option value="Above Asia Midpoint">Above Asia Midpoint</option>
+      <option value="Below Asia Midpoint">Below Asia Midpoint</option>
+    </select>
+  </div>
+
+  <div class="result-box" id="result">
+    <div id="result-inner"></div>
+  </div>
+</div>
+
+<script>
+const DATA = [
+  { asia: "Bearish Compression", london: "Bearish", condition: "Below Asia Midpoint", n: 37,  bull: 0.297, bear: 0.432, chop: 0.270, outcome: "Bearish" },
+  { asia: "Bearish Compression", london: "Bullish", condition: "Above Asia Midpoint", n: 20,  bull: 0.750, bear: 0.150, chop: 0.100, outcome: "Bullish" },
+  { asia: "Bearish Compression", london: "Bullish", condition: "Below Asia Midpoint", n: 25,  bull: 0.280, bear: 0.480, chop: 0.240, outcome: "Bearish" },
+  { asia: "Bearish Expansion",   london: "Bearish", condition: "Below Asia Midpoint", n: 56,  bull: 0.089, bear: 0.714, chop: 0.196, outcome: "Strong Bearish" },
+  { asia: "Bearish Expansion",   london: "Bullish", condition: "Above Asia Midpoint", n: 14,  bull: 0.429, bear: 0.429, chop: 0.143, outcome: "Mixed" },
+  { asia: "Bearish Expansion",   london: "Bullish", condition: "Below Asia Midpoint", n: 51,  bull: 0.176, bear: 0.608, chop: 0.216, outcome: "Bearish" },
+  { asia: "Bullish Compression", london: "Bearish", condition: "Above Asia Midpoint", n: 37,  bull: 0.486, bear: 0.324, chop: 0.189, outcome: "Mild Bullish" },
+  { asia: "Bullish Compression", london: "Bearish", condition: "Below Asia Midpoint", n: 23,  bull: 0.391, bear: 0.348, chop: 0.261, outcome: "Chop / Weak Bullish" },
+  { asia: "Bullish Compression", london: "Bullish", condition: "Above Asia Midpoint", n: 63,  bull: 0.540, bear: 0.222, chop: 0.238, outcome: "Bullish" },
+  { asia: "Bullish Expansion",   london: "Bearish", condition: "Above Asia Midpoint", n: 67,  bull: 0.701, bear: 0.030, chop: 0.269, outcome: "Strong Bullish" },
+  { asia: "Bullish Expansion",   london: "Bullish", condition: "Above Asia Midpoint", n: 87,  bull: 0.770, bear: 0.046, chop: 0.184, outcome: "Strong Bullish" },
+  { asia: "Neutral Balance",     london: "Bearish", condition: "Above Asia Midpoint", n: 14,  bull: 0.714, bear: 0.143, chop: 0.143, outcome: "Bullish" },
+  { asia: "Neutral Balance",     london: "Bearish", condition: "Below Asia Midpoint", n: 39,  bull: 0.308, bear: 0.487, chop: 0.205, outcome: "Bearish" },
+  { asia: "Neutral Balance",     london: "Bullish", condition: "Above Asia Midpoint", n: 57,  bull: 0.509, bear: 0.228, chop: 0.263, outcome: "Mild Bullish" },
+];
+
+function outcomeClass(outcome) {
+  const o = outcome.toLowerCase();
+  if (o.includes('strong bull') || o.includes('bullish')) return 'bullish';
+  if (o.includes('strong bear') || o.includes('bearish')) return 'bearish';
+  if (o.includes('mixed'))  return 'mixed';
+  if (o.includes('chop'))   return 'chop';
+  return 'mixed';
+}
+
+function pct(v) { return (v * 100).toFixed(1) + '%'; }
+
+function render() {
+  const asia      = document.getElementById('asia').value;
+  const london    = document.getElementById('london').value;
+  const condition = document.getElementById('condition').value;
+  const box       = document.getElementById('result');
+  const inner     = document.getElementById('result-inner');
+
+  if (!asia || !london || !condition) { box.classList.remove('visible'); return; }
+
+  const row = DATA.find(d => d.asia === asia && d.london === london && d.condition === condition);
+  box.classList.add('visible');
+
+  if (!row) {
+    inner.innerHTML = `<div class="no-data">No data for this combination.</div>`;
+    return;
+  }
+
+  const cls = outcomeClass(row.outcome);
+
+  inner.innerHTML = `
+    <div class="dominant">
+      <div class="dominant-label">Dominant Outcome</div>
+      <div class="dominant-value ${cls}">${row.outcome}</div>
+    </div>
+    <div class="bars">
+      <div class="bar-row">
+        <div class="bar-meta">
+          <span class="bar-name">Bullish Close</span>
+          <span class="bar-pct" style="color:#22c55e">${pct(row.bull)}</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill bull" style="width:${row.bull*100}%"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-meta">
+          <span class="bar-name">Bearish Close</span>
+          <span class="bar-pct" style="color:#ef4444">${pct(row.bear)}</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill bear" style="width:${row.bear*100}%"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-meta">
+          <span class="bar-name">Chop</span>
+          <span class="bar-pct" style="color:#9ca3af">${pct(row.chop)}</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill chop" style="width:${row.chop*100}%"></div></div>
+      </div>
+    </div>
+    <div class="sample">Sample size: <span>${row.n}</span> sessions</div>
+  `;
+}
+
+['asia','london','condition'].forEach(id => document.getElementById(id).addEventListener('change', render));
+</script>
+</body>
+</html>
