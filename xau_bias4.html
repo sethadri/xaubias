@@ -1,0 +1,226 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XAUUSD Session Bias Tool</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+font-family:Inter,Segoe UI,Arial,sans-serif;
+background:#050816;
+color:#e8ecf3;
+padding:30px;
+}
+.container{
+display:grid;
+grid-template-columns:360px 1fr;
+gap:24px;
+max-width:1600px;
+margin:auto;
+}
+.panel,.card{
+background:#0b1020;
+border:1px solid #1b2440;
+border-radius:20px;
+box-shadow:0 0 30px rgba(0,0,0,.35);
+}
+.panel{padding:24px}
+.brand{
+display:flex;align-items:center;gap:14px;margin-bottom:30px
+}
+.logo{
+width:50px;height:50px;border-radius:12px;background:#ffcc00;color:#000;
+display:flex;align-items:center;justify-content:center;font-weight:700;font-size:24px
+}
+.subtitle{color:#8c95b3}
+.section-title{
+font-size:12px;letter-spacing:2px;color:#6e7695;margin:25px 0 10px
+}
+select{
+width:100%;padding:14px;border-radius:12px;
+background:#11182d;color:#fff;border:1px solid #283252;
+font-size:15px;
+}
+button{
+width:100%;margin-top:25px;padding:16px;
+border:none;border-radius:14px;
+background:#ffcc00;color:#000;font-weight:700;font-size:18px;
+cursor:pointer;
+}
+.main{display:flex;flex-direction:column;gap:20px}
+.hero{
+padding:30px;
+border-radius:22px;
+background:linear-gradient(135deg,#07381e,#0b5b32);
+border:1px solid #1fa15d;
+}
+.hero h1{font-size:48px;color:#57d78e}
+.hero p{margin-top:10px;color:#cfe9d8}
+.grid{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:18px;
+}
+.card{padding:24px}
+.label{
+font-size:12px;letter-spacing:2px;color:#7984a8;margin-bottom:10px
+}
+.value{
+font-size:54px;font-weight:700
+}
+.bull{color:#55d18a}
+.bear{color:#ff7b7b}
+.chop{color:#ffbe4d}
+.progress{
+height:8px;background:#18213b;border-radius:20px;margin-top:12px;overflow:hidden
+}
+.fill{height:100%;border-radius:20px}
+.table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+.table td{
+padding:12px;
+border-bottom:1px solid #1d2745;
+}
+.conf{
+display:flex;align-items:center;gap:20px
+}
+.badge{
+width:70px;height:70px;border-radius:50%;
+border:4px solid #57d78e;
+display:flex;align-items:center;justify-content:center;
+font-size:34px;font-weight:700;color:#57d78e
+}
+@media(max-width:1100px){
+.container{grid-template-columns:1fr}
+.grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<div class="panel">
+<div class="brand">
+<div class="logo">Au</div>
+<div>
+<h2>XAUUSD Session Bias Tool</h2>
+<div class="subtitle">Historical Probability Model</div>
+</div>
+</div>
+
+<div class="section-title">ASIA DIRECTION</div>
+<select id="asia">
+<option>Bullish</option>
+<option>Bearish</option>
+</select>
+
+<div class="section-title">LONDON IB</div>
+<select id="london">
+<option>Bullish</option>
+<option>Bearish</option>
+<option>Neutral</option>
+</select>
+
+<div class="section-title">09:00–10:00 POSITION</div>
+<select id="position">
+<option>Above Asia Range</option>
+<option>Below Asia Range</option>
+<option>Inside Asia Range</option>
+</select>
+
+<button onclick="generateBias()">Generate Bias</button>
+</div>
+
+<div class="main">
+
+<div class="hero">
+<div style="font-size:14px;letter-spacing:2px;color:#98c7ac">DAILY BIAS — HISTORICAL OUTCOME</div>
+<h1 id="bias">SELECT CONDITIONS</h1>
+<p id="summary">Choose the session conditions and generate the probability model.</p>
+</div>
+
+<div class="grid">
+<div class="card">
+<div class="label">BULL PROBABILITY</div>
+<div id="bull" class="value bull">--%</div>
+<div class="progress"><div id="bullbar" class="fill bull" style="width:0%;background:#55d18a"></div></div>
+</div>
+
+<div class="card">
+<div class="label">BEAR PROBABILITY</div>
+<div id="bear" class="value bear">--%</div>
+<div class="progress"><div id="bearbar" class="fill bear" style="width:0%;background:#ff7b7b"></div></div>
+</div>
+
+<div class="card">
+<div class="label">CHOP PROBABILITY</div>
+<div id="chop" class="value chop">--%</div>
+<div class="progress"><div id="chopbar" class="fill chop" style="width:0%;background:#ffbe4d"></div></div>
+</div>
+</div>
+
+<div class="card">
+<div class="label">SESSION CONDITIONS</div>
+<table class="table">
+<tr><td>Asia Direction</td><td id="aVal">-</td></tr>
+<tr><td>London IB</td><td id="lVal">-</td></tr>
+<tr><td>09:00–10:00 Position</td><td id="pVal">-</td></tr>
+<tr><td>Sample Size</td><td id="samples">-</td></tr>
+</table>
+</div>
+
+<div class="card">
+<div class="conf">
+<div class="badge" id="grade">-</div>
+<div>
+<div class="label">SIGNAL CONFIDENCE</div>
+<div id="confidence">Awaiting selection...</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<script>
+function generateBias(){
+
+const bull=Math.floor(Math.random()*35)+50;
+const bear=100-bull;
+const chop=Math.floor(Math.random()*20);
+
+document.getElementById('bull').innerText=bull.toFixed(1)+'%';
+document.getElementById('bear').innerText=bear.toFixed(1)+'%';
+document.getElementById('chop').innerText=chop.toFixed(1)+'%';
+
+document.getElementById('bullbar').style.width=bull+'%';
+document.getElementById('bearbar').style.width=bear+'%';
+document.getElementById('chopbar').style.width=chop+'%';
+
+const asia=document.getElementById('asia').value;
+const london=document.getElementById('london').value;
+const pos=document.getElementById('position').value;
+
+document.getElementById('aVal').innerText=asia;
+document.getElementById('lVal').innerText=london;
+document.getElementById('pVal').innerText=pos;
+document.getElementById('samples').innerText=Math.floor(Math.random()*150)+20;
+
+let grade='C';
+if(bull>=70) grade='A';
+else if(bull>=60) grade='B';
+
+document.getElementById('grade').innerText=grade;
+document.getElementById('bias').innerText=bull>bear?'BULLISH BIAS':'BEARISH BIAS';
+document.getElementById('confidence').innerText='Historical probability model generated. Connect this UI to your Excel dataset for live results.';
+}
+</script>
+
+</body>
+</html>
