@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>XAUUSD Probability Model</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 20px;
+}
+.card {
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 20px;
+}
+select, button {
+    padding: 10px;
+    margin: 8px;
+    font-size: 16px;
+}
+.result {
+    margin-top: 20px;
+    font-size: 18px;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 15px;
+}
+th, td {
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: center;
+}
+th {
+    background: #f2f2f2;
+}
+</style>
+</head>
+<body>
+
+<h1>XAUUSD EOD Probability Model</h1>
+
+<div class="card">
+<label><strong>Asia Direction</strong></label><br>
+<select id="asia">
+    <option>Bullish</option>
+    <option>Bearish</option>
+</select>
+
+<br>
+
+<label><strong>London IB</strong></label><br>
+<select id="london">
+    <option>Bullish</option>
+    <option>Bearish</option>
+    <option>Neutral</option>
+</select>
+
+<br>
+
+<label><strong>09:00–10:00 Position</strong></label><br>
+<select id="position">
+    <option>Above Asia Range</option>
+    <option>Below Asia Range</option>
+    <option>Inside Asia Range</option>
+</select>
+
+<br>
+
+<button onclick="lookup()">Get Probabilities</button>
+
+<div id="result" class="result"></div>
+</div>
+
+<script>
+const data = [{'Asia Direction': 'Bearish', 'London IB': 'Bearish', '09-10 Position': 'Above Asia Range', 'Sample_Size': 4, 'EOD_Bullish': 50.0, 'EOD_Bearish': 50.0, 'EOD_Neutral': 0}, {'Asia Direction': 'Bearish', 'London IB': 'Bearish', '09-10 Position': 'Below Asia Range', 'Sample_Size': 102, 'EOD_Bullish': 14.70588235294118, 'EOD_Bearish': 85.29411764705883, 'EOD_Neutral': 0}, {'Asia Direction': 'Bearish', 'London IB': 'Bearish', '09-10 Position': 'Inside Asia Range', 'Sample_Size': 152, 'EOD_Bullish': 32.23684210526316, 'EOD_Bearish': 67.76315789473685, 'EOD_Neutral': 0}, {'Asia Direction': 'Bearish', 'London IB': 'Bullish', '09-10 Position': 'Above Asia Range', 'Sample_Size': 29, 'EOD_Bullish': 75.86206896551724, 'EOD_Bearish': 24.13793103448276, 'EOD_Neutral': 0}, {'Asia Direction': 'Bearish', 'London IB': 'Bullish', '09-10 Position': 'Below Asia Range', 'Sample_Size': 19, 'EOD_Bullish': 26.31578947368421, 'EOD_Bearish': 73.68421052631578, 'EOD_Neutral': 0}, {'Asia Direction': 'Bearish', 'London IB': 'Bullish', '09-10 Position': 'Inside Asia Range', 'Sample_Size': 188, 'EOD_Bullish': 37.23404255319149, 'EOD_Bearish': 62.76595744680851, 'EOD_Neutral': 0}, {'Asia Direction': 'Bullish', 'London IB': 'Bearish', '09-10 Position': 'Above Asia Range', 'Sample_Size': 24, 'EOD_Bullish': 79.16666666666666, 'EOD_Bearish': 20.83333333333334, 'EOD_Neutral': 0}, {'Asia Direction': 'Bullish', 'London IB': 'Bearish', '09-10 Position': 'Below Asia Range', 'Sample_Size': 23, 'EOD_Bullish': 13.04347826086956, 'EOD_Bearish': 86.95652173913044, 'EOD_Neutral': 0}, {'Asia Direction': 'Bullish', 'London IB': 'Bearish', '09-10 Position': 'Inside Asia Range', 'Sample_Size': 200, 'EOD_Bullish': 68.0, 'EOD_Bearish': 32.0, 'EOD_Neutral': 0}, {'Asia Direction': 'Bullish', 'London IB': 'Bullish', '09-10 Position': 'Above Asia Range', 'Sample_Size': 130, 'EOD_Bullish': 81.53846153846153, 'EOD_Bearish': 18.46153846153846, 'EOD_Neutral': 0}, {'Asia Direction': 'Bullish', 'London IB': 'Bullish', '09-10 Position': 'Below Asia Range', 'Sample_Size': 2, 'EOD_Bullish': 50.0, 'EOD_Bearish': 50.0, 'EOD_Neutral': 0}, {'Asia Direction': 'Bullish', 'London IB': 'Bullish', '09-10 Position': 'Inside Asia Range', 'Sample_Size': 217, 'EOD_Bullish': 73.73271889400922, 'EOD_Bearish': 26.26728110599078, 'EOD_Neutral': 0}, {'Asia Direction': 'Bullish', 'London IB': 'Neutral', '09-10 Position': 'Inside Asia Range', 'Sample_Size': 1, 'EOD_Bullish': 0.0, 'EOD_Bearish': 100.0, 'EOD_Neutral': 0}];
+
+function lookup() {
+    const asia = document.getElementById("asia").value;
+    const london = document.getElementById("london").value;
+    const position = document.getElementById("position").value;
+
+    const row = data.find(r =>
+        r["Asia Direction"] === asia &&
+        r["London IB"] === london &&
+        r["09-10 Position"] === position
+    );
+
+    const result = document.getElementById("result");
+
+    if(!row){
+        result.innerHTML = "<p><strong>No sample found in dataset.</strong></p>";
+        return;
+    }
+
+    result.innerHTML = `
+    <table>
+        <tr>
+            <th>Sample Size</th>
+            <th>EOD Bullish %</th>
+            <th>EOD Bearish %</th>
+            <th>EOD Neutral %</th>
+        </tr>
+        <tr>
+            <td>${row.Sample_Size}</td>
+            <td>${Number(row.EOD_Bullish).toFixed(2)}%</td>
+            <td>${Number(row.EOD_Bearish).toFixed(2)}%</td>
+            <td>${Number(row.EOD_Neutral).toFixed(2)}%</td>
+        </tr>
+    </table>
+    `;
+}
+</script>
+
+</body>
+</html>
