@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XAUUSD M15 — Morning Scenario Tool</title>
+<style>
+  :root {
+    --bg:       #0d0d1a;
+    --panel:    #13132b;
+    --card:     #1a1a35;
+    --border:   #2a2a4a;
+    --gold:     #e8b84b;
+    --gold-dim: #a07c28;
+    --bull:     #22c55e;
+    --bull-dim: #14532d;
+    --bear:     #ef4444;
+    --bear-dim: #7f1d1d;
+    --chop:     #facc15;
+    --chop-dim: #713f12;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --accent:   #6366f1;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+    max-width: 700px;
+  }
+  .header .logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .header .logo svg { width: 32px; height: 32px; }
+  .header h1 {
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: -0.02em;
+  }
+  .header p {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .badge {
+    display: inline-block;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.72rem;
+    padding: 3px 10px;
+    border-radius: 99px;
+    margin-top: 8px;
+  }
+
+  /* ── Selector Panel ── */
+  .selector-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    width: 100%;
+    max-width: 700px;
+    margin-bottom: 24px;
+  }
+  .selector-panel h2 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  .selectors {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+  }
+
+  .sel-group label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .sel-group label span {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  .btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .opt-btn {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 10px 14px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .opt-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .opt-btn.active {
+    border-color: var(--gold);
+    background: rgba(232,184,75,0.12);
+    color: var(--gold);
+    font-weight: 700;
+  }
+  .opt-btn .icon { font-size: 1rem; }
+
+  /* ── Results Panel ── */
+  .results-panel {
+    width: 100%;
+    max-width: 700px;
+  }
+
+  .result-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .result-card.no-data {
+    text-align: center;
+    padding: 48px 32px;
+  }
+  .no-data-icon { font-size: 2.5rem; margin-bottom: 12px; }
+  .no-data-text { color: var(--muted); font-size: 0.9rem; }
+  .no-data-text strong { color: var(--text); display: block; font-size: 1.1rem; margin-bottom: 6px; }
+
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .result-title h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 4px;
+  }
+  .result-title .scenario-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .tag {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 99px;
+    border: 1px solid;
+  }
+  .tag.asia-bull  { background: rgba(34,197,94,0.1);  border-color: var(--bull);  color: var(--bull); }
+  .tag.asia-bear  { background: rgba(239,68,68,0.1);  border-color: var(--bear);  color: var(--bear); }
+  .tag.ib-up      { background: rgba(99,102,241,0.1); border-color: var(--accent); color: var(--accent); }
+  .tag.ib-inside  { background: rgba(100,116,139,0.1); border-color: var(--muted); color: var(--muted); }
+  .tag.ib-down    { background: rgba(239,68,68,0.1);  border-color: var(--bear);  color: var(--bear); }
+  .tag.pos-above  { background: rgba(34,197,94,0.1);  border-color: var(--bull);  color: var(--bull); }
+  .tag.pos-inside { background: rgba(100,116,139,0.1); border-color: var(--muted); color: var(--muted); }
+  .tag.pos-below  { background: rgba(239,68,68,0.1);  border-color: var(--bear);  color: var(--bear); }
+
+  .sample-badge {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    text-align: center;
+    min-width: 90px;
+  }
+  .sample-badge .num {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .sample-badge .lbl {
+    font-size: 0.68rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 3px;
+  }
+
+  /* ── Outcome Bars ── */
+  .outcome-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .outcome-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .outcome-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .outcome-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+  .outcome-label .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .outcome-pct {
+    font-size: 1.1rem;
+    font-weight: 800;
+  }
+  .bar-track {
+    height: 10px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  }
+  .bar-bull { background: linear-gradient(90deg, var(--bull-dim), var(--bull)); }
+  .bar-bear { background: linear-gradient(90deg, var(--bear-dim), var(--bear)); }
+  .bar-chop { background: linear-gradient(90deg, var(--chop-dim), var(--chop)); }
+
+  /* ── Stacked visual bar ── */
+  .stacked-bar-wrap {
+    margin-bottom: 24px;
+  }
+  .stacked-bar-wrap .slbl {
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .stacked-bar {
+    height: 18px;
+    border-radius: 99px;
+    overflow: hidden;
+    display: flex;
+  }
+  .stacked-bull { background: var(--bull); transition: width 0.6s ease; }
+  .stacked-bear { background: var(--bear); transition: width 0.6s ease; }
+  .stacked-chop { background: var(--chop); transition: width 0.6s ease; }
+
+  /* ── Bias indicator ── */
+  .bias-box {
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .bias-box.bull-bias  { background: rgba(34,197,94,0.08);  border: 1.5px solid rgba(34,197,94,0.3); }
+  .bias-box.bear-bias  { background: rgba(239,68,68,0.08);  border: 1.5px solid rgba(239,68,68,0.3); }
+  .bias-box.chop-bias  { background: rgba(250,204,21,0.08); border: 1.5px solid rgba(250,204,21,0.3); }
+  .bias-box.flat-bias  { background: rgba(100,116,139,0.08); border: 1.5px solid rgba(100,116,139,0.3); }
+  .bias-icon { font-size: 2.2rem; line-height: 1; }
+  .bias-text .bias-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .bias-text .bias-value {
+    font-size: 1.3rem;
+    font-weight: 800;
+  }
+  .bias-text .bias-sub {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* ── Stats grid ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .stat-cell {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 12px;
+    text-align: center;
+  }
+  .stat-cell .sv {
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .stat-cell .sl {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+  .sv.bull { color: var(--bull); }
+  .sv.bear { color: var(--bear); }
+  .sv.chop { color: var(--chop); }
+
+  /* ── Footer note ── */
+  .footnote {
+    margin-top: 20px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  /* ── Prompt state ── */
+  .prompt-state {
+    text-align: center;
+    padding: 48px 20px;
+  }
+  .prompt-state .prompt-icon { font-size: 3rem; margin-bottom: 14px; }
+  .prompt-state p { color: var(--muted); font-size: 0.9rem; }
+  .prompt-state p strong { color: var(--text); }
+
+  /* ── Today date ── */
+  .today-bar {
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .today-bar span { color: var(--gold); font-weight: 600; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 480px) {
+    .selector-panel, .result-card { padding: 20px 16px; }
+    .stats-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">
+    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="15" stroke="#e8b84b" stroke-width="1.5"/>
+      <text x="16" y="21" text-anchor="middle" font-size="13" font-weight="700" fill="#e8b84b" font-family="serif">Au</text>
+    </svg>
+    <h1>XAUUSD Morning Bias</h1>
+  </div>
+  <p>Select your session conditions — get your statistical edge for 09:00–10:00 UTC</p>
+  <div class="badge">M15 Backtest · 2022–2026 · 1,091 Trading Days</div>
+</div>
+
+<!-- Today -->
+<div class="today-bar" id="todayBar"></div>
+
+<!-- Selector -->
+<div class="selector-panel">
+  <h2>📋 Session Conditions</h2>
+  <div class="selectors">
+
+    <!-- Asia Direction -->
+    <div class="sel-group">
+      <label><span style="background:var(--gold)"></span>Asia Session</label>
+      <div class="btn-group" id="asiaGroup">
+        <button class="opt-btn" data-group="asia" data-val="Bullish" onclick="select('asia','Bullish',this)">
+          <span class="icon">▲</span> Bullish Close
+        </button>
+        <button class="opt-btn" data-group="asia" data-val="Bearish" onclick="select('asia','Bearish',this)">
+          <span class="icon">▼</span> Bearish Close
+        </button>
+      </div>
+    </div>
+
+    <!-- London IB -->
+    <div class="sel-group">
+      <label><span style="background:var(--accent)"></span>London IB (08–09 UTC)</label>
+      <div class="btn-group" id="ibGroup">
+        <button class="opt-btn" data-group="ib" data-val="IB Broke Up" onclick="select('ib','IB Broke Up',this)">
+          <span class="icon">↑</span> Broke Up
+        </button>
+        <button class="opt-btn" data-group="ib" data-val="IB Inside Asia" onclick="select('ib','IB Inside Asia',this)">
+          <span class="icon">↔</span> Inside Asia
+        </button>
+        <button class="opt-btn" data-group="ib" data-val="IB Broke Down" onclick="select('ib','IB Broke Down',this)">
+          <span class="icon">↓</span> Broke Down
+        </button>
+      </div>
+    </div>
+
+    <!-- 09:00 Position -->
+    <div class="sel-group">
+      <label><span style="background:var(--chop)"></span>09:00 Price vs Asia</label>
+      <div class="btn-group" id="posGroup">
+        <button class="opt-btn" data-group="pos" data-val="Above Asia" onclick="select('pos','Above Asia',this)">
+          <span class="icon">▲</span> Above Asia
+        </button>
+        <button class="opt-btn" data-group="pos" data-val="Inside Asia" onclick="select('pos','Inside Asia',this)">
+          <span class="icon">→</span> Inside Asia
+        </button>
+        <button class="opt-btn" data-group="pos" data-val="Below Asia" onclick="select('pos','Below Asia',this)">
+          <span class="icon">▼</span> Below Asia
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Results -->
+<div class="results-panel" id="resultsPanel">
+  <div class="prompt-state">
+    <div class="prompt-icon">☀️</div>
+    <p><strong>Select all three conditions above</strong><br>to see your morning statistical bias</p>
+  </div>
+</div>
+
+<script>
+// ── Backtest data ──────────────────────────────────────────────────────────
+const DATA = [
+  { asia:'Bullish', ib:'IB Broke Up',     pos:'Above Asia',  n:117, bull:45.3, bear:47.9, chop:6.8  },
+  { asia:'Bullish', ib:'IB Broke Up',     pos:'Inside Asia', n:111, bull:50.5, bear:36.0, chop:13.5 },
+  { asia:'Bullish', ib:'IB Inside Asia',  pos:'Inside Asia', n:319, bull:47.6, bear:40.4, chop:11.9 },
+  { asia:'Bullish', ib:'IB Broke Down',   pos:'Inside Asia', n:13,  bull:46.2, bear:46.2, chop:7.7  },
+  { asia:'Bullish', ib:'IB Broke Down',   pos:'Below Asia',  n:15,  bull:33.3, bear:46.7, chop:20.0 },
+  { asia:'Bearish', ib:'IB Broke Up',     pos:'Above Asia',  n:19,  bull:36.8, bear:42.1, chop:21.1 },
+  { asia:'Bearish', ib:'IB Broke Up',     pos:'Inside Asia', n:15,  bull:46.7, bear:53.3, chop:0.0  },
+  { asia:'Bearish', ib:'IB Inside Asia',  pos:'Inside Asia', n:292, bull:46.2, bear:43.5, chop:10.3 },
+  { asia:'Bearish', ib:'IB Broke Down',   pos:'Inside Asia', n:97,  bull:41.2, bear:41.2, chop:17.5 },
+  { asia:'Bearish', ib:'IB Broke Down',   pos:'Below Asia',  n:93,  bull:48.4, bear:43.0, chop:8.6  },
+];
+
+// ── State ──────────────────────────────────────────────────────────────────
+const state = { asia: null, ib: null, pos: null };
+
+function select(group, val, btn) {
+  // deselect others in group
+  document.querySelectorAll(`.opt-btn[data-group="${group}"]`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state[group] = val;
+  render();
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function render() {
+  const panel = document.getElementById('resultsPanel');
+
+  if (!state.asia || !state.ib || !state.pos) {
+    const missing = [];
+    if (!state.asia) missing.push('Asia Session');
+    if (!state.ib)   missing.push('London IB');
+    if (!state.pos)  missing.push('09:00 Price');
+    panel.innerHTML = `
+      <div class="prompt-state">
+        <div class="prompt-icon">☀️</div>
+        <p><strong>Still needed: ${missing.join(', ')}</strong><br>Select all three conditions to see your bias</p>
+      </div>`;
+    return;
+  }
+
+  const rec = DATA.find(d => d.asia === state.asia && d.ib === state.ib && d.pos === state.pos);
+
+  if (!rec) {
+    panel.innerHTML = `
+      <div class="result-card no-data">
+        <div class="no-data-icon">🔍</div>
+        <div class="no-data-text">
+          <strong>No data for this combination</strong>
+          This scenario didn't occur in the 2022–2026 backtest data (< 3 occurrences). No statistical edge available.
+        </div>
+      </div>`;
+    return;
+  }
+
+  // Determine dominant bias
+  const dominant = rec.bull > rec.bear && rec.bull > rec.chop ? 'bull'
+                 : rec.bear > rec.bull && rec.bear > rec.chop ? 'bear'
+                 : 'chop';
+  const biasLabel = dominant === 'bull' ? '📈 Bullish Lean'
+                  : dominant === 'bear' ? '📉 Bearish Lean'
+                  : '↔ Choppy / No Edge';
+  const biasPct   = dominant === 'bull' ? rec.bull
+                  : dominant === 'bear' ? rec.bear : rec.chop;
+  const biasClass = dominant === 'bull' ? 'bull-bias'
+                  : dominant === 'bear' ? 'bear-bias' : 'chop-bias';
+  const biasColor = dominant === 'bull' ? 'var(--bull)'
+                  : dominant === 'bear' ? 'var(--bear)' : 'var(--chop)';
+  const biasIcon  = dominant === 'bull' ? '📈' : dominant === 'bear' ? '📉' : '↔️';
+
+  // Confidence note
+  const edge = Math.abs(rec.bull - rec.bear);
+  const confidence = edge >= 10 ? 'Clear directional edge' : edge >= 5 ? 'Slight directional lean' : 'Near coin-flip — low edge';
+  const sampleNote = rec.n >= 100 ? 'Large sample — high confidence' : rec.n >= 30 ? 'Moderate sample' : '⚠️ Small sample — interpret with caution';
+
+  // Tag classes
+  const asiaTagClass = state.asia === 'Bullish' ? 'asia-bull' : 'asia-bear';
+  const ibTagClass   = state.ib === 'IB Broke Up' ? 'ib-up' : state.ib === 'IB Broke Down' ? 'ib-down' : 'ib-inside';
+  const posTagClass  = state.pos === 'Above Asia' ? 'pos-above' : state.pos === 'Below Asia' ? 'pos-below' : 'pos-inside';
+
+  panel.innerHTML = `
+    <div class="result-card">
+
+      <div class="result-header">
+        <div class="result-title">
+          <h3>Morning Scenario Analysis</h3>
+          <div class="scenario-tags">
+            <span class="tag ${asiaTagClass}">${state.asia === 'Bullish' ? '▲' : '▼'} Asia ${state.asia}</span>
+            <span class="tag ${ibTagClass}">${state.ib === 'IB Broke Up' ? '↑' : state.ib === 'IB Broke Down' ? '↓' : '↔'} ${state.ib}</span>
+            <span class="tag ${posTagClass}">${state.pos === 'Above Asia' ? '▲' : state.pos === 'Below Asia' ? '▼' : '→'} ${state.pos}</span>
+          </div>
+        </div>
+        <div class="sample-badge">
+          <div class="num">${rec.n}</div>
+          <div class="lbl">Sample Days</div>
+        </div>
+      </div>
+
+      <!-- Bias box -->
+      <div class="bias-box ${biasClass}">
+        <div class="bias-icon">${biasIcon}</div>
+        <div class="bias-text">
+          <div class="bias-label">Statistical Bias</div>
+          <div class="bias-value" style="color:${biasColor}">${biasLabel} · ${biasPct.toFixed(1)}%</div>
+          <div class="bias-sub">${confidence} · ${sampleNote}</div>
+        </div>
+      </div>
+
+      <!-- Stacked bar -->
+      <div class="stacked-bar-wrap">
+        <div class="slbl">Outcome distribution</div>
+        <div class="stacked-bar">
+          <div class="stacked-bull" style="width:${rec.bull}%"></div>
+          <div class="stacked-chop" style="width:${rec.chop}%"></div>
+          <div class="stacked-bear" style="width:${rec.bear}%"></div>
+        </div>
+      </div>
+
+      <!-- Individual outcome bars -->
+      <div class="outcome-section">
+        <div class="outcome-row">
+          <div class="outcome-meta">
+            <span class="outcome-label"><span class="dot" style="background:var(--bull)"></span>Bullish (close > open)</span>
+            <span class="outcome-pct" style="color:var(--bull)">${rec.bull.toFixed(1)}%</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill bar-bull" style="width:${rec.bull}%"></div></div>
+        </div>
+        <div class="outcome-row">
+          <div class="outcome-meta">
+            <span class="outcome-label"><span class="dot" style="background:var(--bear)"></span>Bearish (close < open)</span>
+            <span class="outcome-pct" style="color:var(--bear)">${rec.bear.toFixed(1)}%</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill bar-bear" style="width:${rec.bear}%"></div></div>
+        </div>
+        <div class="outcome-row">
+          <div class="outcome-meta">
+            <span class="outcome-label"><span class="dot" style="background:var(--chop)"></span>Chop (|move| < 0.5 pts)</span>
+            <span class="outcome-pct" style="color:var(--chop)">${rec.chop.toFixed(1)}%</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill bar-chop" style="width:${rec.chop}%"></div></div>
+        </div>
+      </div>
+
+      <!-- Stats grid -->
+      <div class="stats-grid">
+        <div class="stat-cell">
+          <div class="sv bull">${rec.bull.toFixed(1)}%</div>
+          <div class="sl">Bullish</div>
+        </div>
+        <div class="stat-cell">
+          <div class="sv bear">${rec.bear.toFixed(1)}%</div>
+          <div class="sl">Bearish</div>
+        </div>
+        <div class="stat-cell">
+          <div class="sv chop">${rec.chop.toFixed(1)}%</div>
+          <div class="sl">Chop</div>
+        </div>
+      </div>
+
+      <div class="footnote">
+        Window: 09:00–10:00 UTC · M15 · 2022-03-04 → 2026-05-28 · ${rec.n} matched days out of 1,091 analysed<br>
+        Outcome = net direction of first candle open to 10:00 close · Not financial advice
+      </div>
+
+    </div>`;
+}
+
+// ── Date display ───────────────────────────────────────────────────────────
+(function() {
+  const now = new Date();
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('todayBar').innerHTML =
+    `Today is <span>${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()} ${now.getFullYear()}</span> · London open: 08:00 UTC`;
+})();
+</script>
+
+</body>
+</html>
